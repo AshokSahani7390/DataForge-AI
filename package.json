@@ -1,0 +1,27 @@
+{
+  "name": "dataforge-ai",
+  "private": true,
+  "description": "Production-grade AI-powered web scraping SaaS platform",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w apps/web\" \"npm run dev -w apps/api\" \"npm run dev -w apps/worker\"",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces"
+  },
+  "devDependencies": {
+    "@jridgewell/gen-mapping": "^0.3.13",
+    "@prisma/client": "^5.11.0",
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.0.3",
+    "prisma": "^5.11.0",
+    "ts-interface-checker": "^1.0.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "next": "14.1.0"
+  }
+}

@@ -1,0 +1,69 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  firebaseId    String    @unique
+  stripeId      String?   @unique
+  plan          Plan      @default(FREE)
+  usageCount    Int       @default(0)
+  projects      Project[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+enum Plan {
+  FREE
+  PRO
+  GROWTH
+  ENTERPRISE
+}
+
+model Project {
+  id                String    @id @default(uuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id])
+  name              String
+  description       String?
+  targetUrl         String
+  selectorConfig    Json      // { type: 'manual' | 'ai', selectors?: Record<string, string>, aiPrompt?: string }
+  schedule          String    @default("manual") // manual, hourly, daily, weekly
+  crawlDepth        Int       @default(0)
+  paginationSupport Boolean   @default(false)
+  maxPages          Int       @default(1)
+  status            String    @default("active")
+  jobs              Job[]
+  scrapedData       ScrapedData[]
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model Job {
+  id          String    @id @default(uuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id])
+  status      String    @default("pending") // pending, running, completed, failed
+  startedAt   DateTime?
+  completedAt DateTime?
+  error       String?
+  logs        String[]
+  createdAt   DateTime  @default(now())
+}
+
+model ScrapedData {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+  content   Json     // The actual scraped record { product: "...", price: "..." }
+  createdAt DateTime @default(now())
+}
