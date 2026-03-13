@@ -1,9 +1,0 @@
-{
-  "/dashboard/page": "app/dashboard/page.js",
-  "/dashboard/explorer/page": "app/dashboard/explorer/page.js",
-  "/dashboard/export-center/page": "app/dashboard/export-center/page.js",
-  "/dashboard/billing/page": "app/dashboard/billing/page.js",
-  "/dashboard/api-access/page": "app/dashboard/api-access/page.js",
-  "/dashboard/settings/page": "app/dashboard/settings/page.js",
-  "/dashboard/scraping-projects/page": "app/dashboard/scraping-projects/page.js"
-}
