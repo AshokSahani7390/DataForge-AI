@@ -1,7 +1,6 @@
 import { chromium } from 'playwright-extra';
 import stealth from 'puppeteer-extra-plugin-stealth';
 import * as cheerio from 'cheerio';
-import { ScrapingProject } from '@dataforge/shared';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Extension for playwright-extra
@@ -27,14 +26,27 @@ export class ScraperService {
   /**
    * Main scraping entry point for a single run
    */
-  async runScrape(project: ScrapingProject): Promise<ScrapeResult> {
+  async runScrape(project: any): Promise<ScrapeResult> {
     const logs: string[] = [];
-    const proxyUrl = process.env.PROXY_URL;
+    
+    // Choose proxy: Project-specific > Global env > None
+    let proxyConfig = undefined;
+    if (project.proxySettings?.server) {
+      proxyConfig = {
+        server: project.proxySettings.server,
+        username: project.proxySettings.username,
+        password: project.proxySettings.password,
+      };
+      logs.push(`[Service] Using Custom Proxy: ${project.proxySettings.server.split('://')[1] || project.proxySettings.server}`);
+    } else if (process.env.PROXY_URL) {
+      proxyConfig = { server: process.env.PROXY_URL };
+      logs.push(`[Service] Using Global Proxy: ${process.env.PROXY_URL.split('@')[1] || 'Default'}`);
+    }
     
     // Setup browser with proxy if available
     const browser = await chromium.launch({
       headless: true,
-      proxy: proxyUrl ? { server: proxyUrl } : undefined,
+      proxy: proxyConfig,
       args: ['--no-sandbox']
     });
 
@@ -47,12 +59,21 @@ export class ScraperService {
     try {
       const page = await context.newPage();
       logs.push(`[Service] Navigating to: ${project.url}`);
-      if (proxyUrl) logs.push(`[Service] Using Proxy: ${proxyUrl.split('@')[1] || 'Default'}`);
+      if (proxyConfig) logs.push(`[Service] Network routing active via Proxy`);
 
       await page.goto(project.url, { waitUntil: 'networkidle', timeout: 90000 });
       
       // Basic anti-bot wait
       await page.waitForTimeout(Math.random() * 2000 + 1000);
+
+      // --- Capture Visual Proof ---
+      let screenshot: Buffer | undefined;
+      try {
+        logs.push('[Service] Capturing visual proof...');
+        screenshot = await page.screenshot({ fullPage: false }) as Buffer;
+      } catch (screenshotErr: any) {
+        logs.push(`[Service] Warning: Failed to capture screenshot: ${screenshotErr.message}`);
+      }
 
       const html = await page.content();
       const $ = cheerio.load(html);
@@ -61,12 +82,13 @@ export class ScraperService {
         logs.push('[Service] Executing manual selector extraction');
         results = this.extractManual($, project.selectorConfig.selectors);
       } else if (project.selectorConfig.type === 'ai') {
-        logs.push('[Service] Initializing Gemini AI for extraction...');
-        results = await this.extractAI(page, project.selectorConfig.aiExtractionPrompt || "Identify and extract all primary data items from this page.");
+        const modelName = project.aiModel || "gemini-1.5-flash";
+        logs.push(`[Service] Initializing ${modelName} AI for extraction...`);
+        results = await this.extractAI(page, project.selectorConfig.aiExtractionPrompt || "Identify and extract all primary data items from this page.", modelName);
       }
 
       logs.push(`[Service] Success: Extracted ${results.length} records.`);
-      return { data: results, logs, success: true };
+      return { data: results, logs, success: true, screenshot };
 
     } catch (err: any) {
       logs.push(`[Service] Error: ${err.message}`);
@@ -84,12 +106,12 @@ export class ScraperService {
     return [record];
   }
 
-  private async extractAI(page: any, prompt: string): Promise<any[]> {
+  private async extractAI(page: any, prompt: string, modelName: string = "gemini-1.5-flash"): Promise<any[]> {
     if (!this.genAI) {
       throw new Error("AI extraction requested but LLM_API_KEY is not configured.");
     }
 
-    const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = this.genAI.getGenerativeModel({ model: modelName });
 
     // Clean DOM to minimize token usage
     const cleanContent = await page.evaluate(() => {

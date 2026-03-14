@@ -1,3 +1,5 @@
+"use client";
+
 import Sidebar from "@/components/dashboard/Sidebar";
 import Navbar from "@/components/dashboard/Navbar";
 

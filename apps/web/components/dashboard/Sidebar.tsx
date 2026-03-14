@@ -10,10 +10,13 @@ import {
   Settings, 
   CreditCard, 
   Key, 
-  Sparkles
+  Sparkles,
+  User as UserIcon
 } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { useStats } from "@/hooks/useStats";
+import { useAuth } from "@/context/AuthContext";
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -21,6 +24,9 @@ function cn(...inputs: ClassValue[]) {
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { stats } = useStats();
+  const { user } = useAuth();
+
 
   const navItems = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, group: "Main" },
@@ -76,15 +82,23 @@ export default function Sidebar() {
       {/* Sidebar Footer: User Status */}
       <div className="p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col items-center">
         <div className="flex items-center justify-between w-full mb-2">
-          <span className="text-xs text-gray-400">Pro Plan</span>
-          <span className="text-[10px] bg-primary/20 text-primary-DEFAULT px-2 py-0.5 rounded-full font-bold">75% Used</span>
+          <span className="text-xs text-gray-400 capitalize">Free Plan</span>
+          <span className="text-[10px] bg-primary/20 text-primary-DEFAULT px-2 py-0.5 rounded-full font-bold">
+            {Math.round(stats.quotaPercentage)}% Used
+          </span>
         </div>
         <div className="w-full bg-white/10 h-1.5 rounded-full mb-3 overflow-hidden">
-          <div className="bg-gradient-premium h-full w-[75%] rounded-full shadow-[0_0_10px_rgba(0,112,243,0.5)]"></div>
+          <div 
+            className="bg-gradient-premium h-full rounded-full shadow-[0_0_10px_rgba(0,112,243,0.5)] transition-all duration-1000"
+            style={{ width: `${Math.min(stats.quotaPercentage, 100)}%` }}
+          ></div>
         </div>
-        <button className="w-full text-xs font-bold py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors">
+        <Link 
+          href="/dashboard/billing"
+          className="w-full text-xs font-bold py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-center block"
+        >
           Upgrade Now
-        </button>
+        </Link>
       </div>
     </aside>
   );
